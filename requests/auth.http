@@ -1,0 +1,50 @@
+# ============================================================================
+# auth.http — 认证与令牌请求集合（任务 3）
+# 可在 VS Code 的 REST Client 或 IntelliJ HTTP Client 中直接运行。
+# 启动系统后（docker compose up），用 @test 中的账号演示。
+# 说明：令牌在“登录”返回的 access_token 里，需手动填入下面 @token 变量。
+# ============================================================================
+@host = http://localhost:8000/api/v1/auth
+@token = 在这里粘贴登录返回的 access_token
+
+### 3.1 注册学生（角色由服务器强制为 student）
+POST {{host}}/register
+Content-Type: application/json
+
+{ "email": "new@test.edu", "password": "Newpass!123" }
+
+### 3.1 登录（契约 O-07）——成功返回 access_token
+POST {{host}}/token
+Content-Type: application/json
+
+{ "email": "student@test.edu", "password": "Student!123" }
+
+### 3.1 登录失败：错误密码（与错误邮箱返回相同 401，不泄露账号是否存在）
+POST {{host}}/token
+Content-Type: application/json
+
+{ "email": "student@test.edu", "password": "WrongPassword!" }
+
+### 3.2 获取当前用户（验证令牌是否有效）
+GET {{host}}/me
+Authorization: Bearer {{token}}
+
+### 3.2 登出（吊销令牌，之后同一令牌访问 /me 返回 401）
+POST {{host}}/logout
+Authorization: Bearer {{token}}
+
+### 3.2 演示：用已吊销令牌访问受保护端点 -> 应返回 401
+GET {{host}}/me
+Authorization: Bearer {{token}}
+
+### 3.3 找回密码：请求一次性验证码（邮件进 Mailpit，http://localhost:8025）
+POST {{host}}/password-reset/request
+Content-Type: application/json
+
+{ "email": "student@test.edu" }
+
+### 3.3 找回密码：用验证码设置新密码（验证码只能用一次）
+POST {{host}}/password-reset/confirm
+Content-Type: application/json
+
+{ "email": "student@test.edu", "code": "123456", "new_password": "NewPass!456" }

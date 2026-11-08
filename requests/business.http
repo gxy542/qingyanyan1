@@ -1,0 +1,46 @@
+# ============================================================================
+# business.http — 任务4 业务端点请求集合 (ЛР2 контракты O-01..O-09)
+# 使用方式: 先 POST /api/v1/auth/token 拿 access_token, 替换 {{token}};
+#           可在 VS Code REST Client / Postman 中逐段发送。
+# ============================================================================
+
+### O-04 学生: 自己的成绩列表
+GET http://localhost:8000/api/v1/grades
+Authorization: Bearer {{token}}
+
+### O-01 学生: 按 ID 查成绩 (把 <grade_id> 换成上面返回的 id)
+GET http://localhost:8000/api/v1/grades/<grade_id>
+Authorization: Bearer {{token}}
+
+### O-03 教师/员工: 修改成绩 (version 必须等于当前版本, 否则 409)
+PATCH http://localhost:8000/api/v1/grades/<grade_id>
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "value": 90, "version": 1 }
+
+### O-02 学生: 创建补考申请 (student_id 由服务器决定)
+POST http://localhost:8000/api/v1/retake-requests
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "course_id": "<course_id>", "reason": "Не удалось сдать с первого раза, прошу пересдачу" }
+
+### O-06 LLM 检查: 按 ЛР3 例外返回 501
+POST http://localhost:8000/api/v1/retake-requests/<request_id>/check
+Authorization: Bearer {{token}}
+
+### O-08 课程
+GET http://localhost:8000/api/v1/courses/<course_id>
+Authorization: Bearer {{token}}
+
+### O-05 员工: 确认成绩
+POST http://localhost:8000/api/v1/admin/grades/<grade_id>/confirm
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "action": "approve" }
+
+### O-09 员工: 审计日志
+GET http://localhost:8000/api/v1/audit/events
+Authorization: Bearer {{token}}

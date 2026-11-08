@@ -1,0 +1,70 @@
+# ============================================================================
+# docker-compose.yml — 一键启动整个系统（任务 1.2）
+# 容器名称 = 服务名，对应 ЛР2 容器图：db(PostgreSQL C-06)、redis(C-07)、
+# mailpit(本地邮件桩 C-10)、api(FastAPI：API C-02 + Auth C-03 + Domain C-04 合并)
+# 说明：LLM Gateway 与 Message Broker 不在本任务实现（任务3只做认证/令牌）。
+# 用法：在项目根目录先 cp .env.example .env，然后 docker compose up --build
+# ============================================================================
+name: gradebook
+
+services:
+  # ---------- PostgreSQL C-06（持久数据）----------
+  db:
+    image: postgres:16-alpine
+    container_name: gradebook-db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD 必须在 .env 中设置}
+      POSTGRES_DB: ${POSTGRES_DB:-gradebook}
+    ports:
+      - "5432:5432"
+    volumes:
+      - dbdata:/var/lib/postgresql/data
+      # 首次启动时按序自动执行 db/ 下的 schema.sql、roles.sql、seed.sql
+      - ./db:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-gradebook}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # ---------- Redis C-07（会话 allowlist / 一次性验证码 / 限流）----------
+  redis:
+    image: redis:7-alpine
+    container_name: gradebook-redis
+    ports:
+      - "6379:6379"
+
+  # ---------- 本地邮件桩（Mailpit，任务 3.3）----------
+  # SMTP 端口 1025；网页收件箱 http://localhost:8025
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: gradebook-mailpit
+    ports:
+      - "1025:1025"   # SMTP
+      - "8025:8025"   # Web UI
+
+  # ---------- API 服务（FastAPI）----------
+  api:
+    build: ./api
+    container_name: gradebook-api
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://${APP_DB_USER:-app_api}:${APP_DB_PASSWORD}@db:5432/${POSTGRES_DB:-gradebook}
+      REDIS_URL: redis://redis:6379/0
+      MAIL_HOST: mailpit
+    ports:
+      - "8000:8000"
+    volumes:
+      # 前端静态页面（web/index.html），只读挂载到容器内
+      - ./web:/app/web:ro
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      mailpit:
+        condition: service_started
+
+volumes:
+  dbdata:

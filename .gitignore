@@ -1,0 +1,19 @@
+# 依赖与运行时
+node_modules/
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# 密钥与环境 —— 绝不允许入库（任务 1.3）
+.env
+.env.local
+
+# 日志
+*.log
+logs/
+
+# IDE / 系统
+.vscode/
+.idea/
+.DS_Store

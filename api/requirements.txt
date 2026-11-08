@@ -1,0 +1,22 @@
+# FastAPI 及其 ASGI 服务器
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+
+# 数据校验（Pydantic v2）
+pydantic==2.10.4
+email-validator==2.2.0
+
+# PostgreSQL 异步驱动（参数化查询，天然防 SQL 注入）
+asyncpg==0.30.0
+
+# Redis 异步客户端（会话 allowlist / 验证码 / 限流）
+redis==5.2.1
+
+# Argon2id 密码哈希（任务 3.1）
+argon2-cffi==23.1.0
+
+# JWT 令牌（任务 3.2）
+PyJWT==2.10.1
+
+# 本地邮件桩 SMTP（任务 3.3）
+aiosmtplib==3.0.2

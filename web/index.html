@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Журнал оценок</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, "Segoe UI", Roboto, sans-serif; background: #f4f5f7; color: #1f2328; min-height: 100vh; }
+  header { background: #1f3a5f; color: #fff; padding: 14px 24px; display: flex; justify-content: space-between; align-items: center; }
+  header h1 { font-size: 18px; font-weight: 600; }
+  header .user { font-size: 13px; opacity: .9; display: flex; gap: 12px; align-items: center; }
+  .container { max-width: 960px; margin: 30px auto; padding: 0 20px; }
+  .card { background: #fff; border-radius: 8px; padding: 24px; box-shadow: 0 1px 3px rgba(0,0,0,.06); margin-bottom: 20px; }
+  .tabs { display: flex; gap: 0; border-bottom: 1px solid #e5e7eb; margin-bottom: 20px; }
+  .tabs button { background: none; border: none; padding: 10px 18px; font-size: 14px; cursor: pointer; color: #6b7280; border-bottom: 2px solid transparent; }
+  .tabs button.active { color: #1f3a5f; border-bottom-color: #1f3a5f; font-weight: 600; }
+  label { display: block; font-size: 13px; color: #4b5563; margin: 12px 0 4px; }
+  input, select, textarea { width: 100%; padding: 9px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; font-family: inherit; }
+  input:focus, select:focus, textarea:focus { outline: none; border-color: #1f3a5f; }
+  button.primary { background: #1f3a5f; color: #fff; border: none; padding: 10px 18px; border-radius: 6px; font-size: 14px; cursor: pointer; margin-top: 16px; }
+  button.primary:hover { background: #2c4f7c; }
+  button.ghost { background: none; border: 1px solid #d1d5db; color: #374151; padding: 6px 12px; border-radius: 6px; font-size: 13px; cursor: pointer; }
+  button.danger { background: #b91c1c; }
+  table { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 14px; }
+  th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid #e5e7eb; }
+  th { color: #6b7280; font-weight: 500; font-size: 12px; text-transform: uppercase; letter-spacing: .04em; }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 12px; }
+  .badge.current { background: #fef3c7; color: #92400e; }
+  .badge.closed { background: #d1fae5; color: #065f46; }
+  .badge.retake { background: #fee2e2; color: #991b1b; }
+  .msg { padding: 10px 14px; border-radius: 6px; margin: 12px 0; font-size: 14px; display: none; }
+  .msg.error { background: #fee2e2; color: #991b1b; display: block; }
+  .msg.ok { background: #d1fae5; color: #065f46; display: block; }
+  .role-tag { background: rgba(255,255,255,.2); padding: 2px 8px; border-radius: 4px; font-size: 12px; }
+  h2 { font-size: 16px; margin-bottom: 8px; color: #1f3a5f; }
+  .hint { font-size: 12px; color: #6b7280; margin-top: 4px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Журнал оценок обучающихся</h1>
+  <div class="user" id="userBar" style="display:none">
+    <span id="userEmail"></span>
+    <span class="role-tag" id="userRole"></span>
+    <button class="ghost" style="color:#fff;border-color:rgba(255,255,255,.4)" onclick="logout()">Выйти</button>
+  </div>
+</header>
+
+<div class="container">
+
+  <!-- ============ 未登录：登录 / 注册 ============ -->
+  <div class="card" id="authCard">
+    <div class="tabs">
+      <button id="tabLogin" class="active" onclick="showTab('login')">Вход</button>
+      <button id="tabRegister" onclick="showTab('register')">Регистрация</button>
+    </div>
+    <div id="msg"></div>
+
+    <div id="paneLogin">
+      <label>Email</label>
+      <input type="email" id="loginEmail" placeholder="student@test.edu">
+      <label>Пароль</label>
+      <input type="password" id="loginPassword" placeholder="••••••••">
+      <button class="primary" onclick="login()">Войти</button>
+    </div>
+
+    <div id="paneRegister" style="display:none">
+      <label>Email</label>
+      <input type="email" id="regEmail" placeholder="you@edu.ru">
+      <label>Пароль (мин. 8 символов, заглавная + цифра)</label>
+      <input type="password" id="regPassword" placeholder="••••••••">
+      <div class="hint">Роль назначается сервером: новые пользователи — «студент».</div>
+      <button class="primary" onclick="register()">Зарегистрироваться</button>
+    </div>
+  </div>
+
+  <!-- ============ 学生视图 ============ -->
+  <div id="studentView" style="display:none">
+    <div class="card">
+      <h2>Мои оценки</h2>
+      <table>
+        <thead><tr><th>Курс</th><th>Оценка</th><th>Статус</th><th>Версия</th></tr></thead>
+        <tbody id="myGradesBody"></tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <h2>Заявка на пересдачу</h2>
+      <div id="retakeMsg"></div>
+      <label>Курс</label>
+      <select id="retakeCourse"></select>
+      <label>Причина (5–2000 символов)</label>
+      <textarea id="retakeReason" rows="3" placeholder="Почему требуется пересдача…"></textarea>
+      <button class="primary" onclick="submitRetake()">Отправить заявку</button>
+    </div>
+  </div>
+
+  <!-- ============ 教师/员工视图 ============ -->
+  <div id="staffView" style="display:none">
+    <div class="card">
+      <h2>Все оценки</h2>
+      <div id="staffMsg"></div>
+      <table>
+        <thead><tr><th>ID</th><th>Оценка</th><th>Статус</th><th>Версия</th><th>Действия</th></tr></thead>
+        <tbody id="allGradesBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const API = '/api/v1';
+let state = { token: localStorage.getItem('token'), role: localStorage.getItem('role'), email: localStorage.getItem('email') };
+
+function msg(id, text, ok) {
+  const el = document.getElementById(id);
+  el.className = 'msg ' + (ok ? 'ok' : 'error');
+  el.textContent = text;
+  setTimeout(() => { el.style.display = 'none'; }, 3500);
+}
+
+function showTab(t) {
+  document.getElementById('tabLogin').classList.toggle('active', t === 'login');
+  document.getElementById('tabRegister').classList.toggle('active', t === 'register');
+  document.getElementById('paneLogin').style.display = t === 'login' ? '' : 'none';
+  document.getElementById('paneRegister').style.display = t === 'register' ? '' : 'none';
+}
+
+async function api(path, opts = {}) {
+  const headers = { 'Content-Type': 'application/json' };
+  if (state.token) headers['Authorization'] = 'Bearer ' + state.token;
+  const res = await fetch(API + path, { ...opts, headers });
+  let data = null;
+  try { data = await res.json(); } catch (e) {}
+  if (!res.ok) {
+    // FastAPI 校验错误时 detail 是数组对象，统一转成可读字符串
+    let detail = (data && data.detail) || ('Ошибка ' + res.status);
+    if (Array.isArray(detail)) detail = detail.map(d => d.msg || JSON.stringify(d)).join('; ');
+    throw new Error(detail);
+  }
+  return data;
+}
+
+async function login() {
+  try {
+    const data = await api('/auth/token', { method: 'POST', body: JSON.stringify({
+      email: document.getElementById('loginEmail').value,
+      password: document.getElementById('loginPassword').value,
+    })});
+    state.token = data.access_token;
+    const me = await api('/auth/me');
+    state.role = me.role; state.email = me.email;
+    localStorage.setItem('token', state.token);
+    localStorage.setItem('role', state.role);
+    localStorage.setItem('email', state.email);
+    enterApp();
+  } catch (e) { msg('msg', e.message); }
+}
+
+async function register() {
+  try {
+    await api('/auth/register', { method: 'POST', body: JSON.stringify({
+      email: document.getElementById('regEmail').value,
+      password: document.getElementById('regPassword').value,
+    })});
+    msg('msg', 'Регистрация успешна. Теперь войдите.', true);
+    showTab('login');
+  } catch (e) { msg('msg', e.message); }
+}
+
+function logout() {
+  api('/auth/logout', { method: 'POST' }).catch(()=>{});
+  state = {};
+  localStorage.clear();
+  location.reload();
+}
+
+function statusBadge(s) {
+  return `<span class="badge ${s}">${s}</span>`;
+}
+
+async function loadStudent() {
+  const grades = await api('/grades');
+  const tbody = document.getElementById('myGradesBody');
+  tbody.innerHTML = '';
+  if (!grades.length) tbody.innerHTML = '<tr><td colspan="4">Пока нет оценок</td></tr>';
+  for (const g of grades) {
+    tbody.innerHTML += `<tr><td>${g.enrollment_id.slice(0,8)}…</td><td>${g.value ?? '—'}</td><td>${statusBadge(g.status)}</td><td>${g.version}</td></tr>`;
+  }
+  // 课程下拉
+  const courses = await api('/courses');
+  const sel = document.getElementById('retakeCourse');
+  sel.innerHTML = courses.map(c => `<option value="${c.id}">${c.code}</option>`).join('');
+}
+
+async function submitRetake() {
+  try {
+    await api('/retake-requests', { method: 'POST', body: JSON.stringify({
+      course_id: document.getElementById('retakeCourse').value,
+      reason: document.getElementById('retakeReason').value,
+    })});
+    msg('retakeMsg', 'Заявка отправлена.', true);
+    document.getElementById('retakeReason').value = '';
+  } catch (e) { msg('retakeMsg', e.message); }
+}
+
+async function loadStaff() {
+  const grades = await api('/grades');
+  const tbody = document.getElementById('allGradesBody');
+  tbody.innerHTML = '';
+  for (const g of grades) {
+    const canConfirm = state.role === 'employee' && g.status !== 'closed';
+    tbody.innerHTML += `<tr>
+      <td>${g.id.slice(0,8)}…</td>
+      <td>${g.value ?? '—'}</td>
+      <td>${statusBadge(g.status)}</td>
+      <td>${g.version}</td>
+      <td>
+        <button class="ghost" onclick="editGrade('${g.id}', ${g.value ?? 0}, ${g.version})">Изменить</button>
+        ${canConfirm ? ` <button class="ghost" onclick="confirmGrade('${g.id}')">Подтвердить</button>` : ''}
+      </td>
+    </tr>`;
+  }
+}
+
+async function editGrade(id, currentVal, version) {
+  const v = prompt('Новая оценка (0–100):', currentVal);
+  if (v === null) return;
+  try {
+    await api('/grades/' + id, { method: 'PATCH', body: JSON.stringify({ value: Number(v), version }) });
+    msg('staffMsg', 'Оценка обновлена.', true);
+    loadStaff();
+  } catch (e) { msg('staffMsg', e.message); }
+}
+
+async function confirmGrade(id) {
+  try {
+    await api('/admin/grades/' + id + '/confirm', { method: 'POST', body: JSON.stringify({ action: 'approve' }) });
+    msg('staffMsg', 'Оценка подтверждена.', true);
+    loadStaff();
+  } catch (e) { msg('staffMsg', e.message); }
+}
+
+function enterApp() {
+  document.getElementById('authCard').style.display = 'none';
+  document.getElementById('userBar').style.display = 'flex';
+  document.getElementById('userEmail').textContent = state.email;
+  document.getElementById('userRole').textContent = state.role;
+  if (state.role === 'student') {
+    document.getElementById('studentView').style.display = '';
+    loadStudent();
+  } else {
+    document.getElementById('staffView').style.display = '';
+    loadStaff();
+  }
+}
+
+if (state.token && state.role) enterApp();
+</script>
+</body>
+</html>

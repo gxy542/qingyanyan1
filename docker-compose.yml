@@ -17,7 +17,8 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD 必须在 .env 中设置}
       POSTGRES_DB: ${POSTGRES_DB:-gradebook}
     ports:
-      - "5432:5432"
+      # 宿主机用 5433，避开本机 PostgreSQL 18 已占用的 5432；容器内仍是 5432
+      - "5433:5432"
     volumes:
       - dbdata:/var/lib/postgresql/data
       # 首次启动时按序自动执行 db/ 下的 schema.sql、roles.sql、seed.sql

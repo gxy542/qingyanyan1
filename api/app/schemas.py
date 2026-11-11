@@ -121,6 +121,12 @@ class CourseOut(BaseModel):
     owner_id: str
 
 
+class CourseCreateRequest(BaseModel):
+    """新增课程请求。客户端只能提交课程编码 code；
+    owner_id 由服务器根据令牌写入，客户端无法伪造。"""
+    code: str = Field(min_length=2, max_length=32)
+
+
 class AdminConfirmRequest(BaseModel):
     """管理员确认成绩（O-05）。action 由客户端声明（approve/reject），
     但只有 employee 角色能调用；谁操作由服务器审计。"""

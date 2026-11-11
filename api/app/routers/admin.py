@@ -108,3 +108,39 @@ async def list_audit_events(request: Request,
         raise
     except Exception as exc:
         raise await errors.internal_error(exc)
+
+
+@router.post("/admin/courses", response_model=schemas.CourseOut, status_code=201)
+async def create_course(body: schemas.CourseCreateRequest, request: Request,
+                        user: CurrentUser = Depends(require_role("employee", "teacher"))):
+    """新增课程（仅 employee / teacher，RBAC 闸门）。
+
+    - owner_id 由服务器写为当前登录用户，客户端不能伪造；
+    - code 有唯一约束，重复编码返回 409；
+    - 全程参数化 SQL，防注入；操作写审计日志。
+    """
+    pool = request.app.state.pool
+    try:
+        # 先查重，给出明确的 409 提示
+        existing = await pool.fetchval("SELECT id FROM courses WHERE code = $1", body.code)
+        if existing is not None:
+            raise HTTPException(status_code=409, detail="Курс с таким кодом уже существует")
+
+        row = await pool.fetchrow(
+            "INSERT INTO courses (code, owner_id) VALUES ($1, $2) RETURNING id, code, owner_id",
+            body.code, user.id,
+        )
+        # 审计：记录是谁创建了课程
+        await pool.execute(
+            "INSERT INTO audit_log (actor_id, action, object_id) VALUES ($1, $2, $3)",
+            user.id, "course.create", row["id"],
+        )
+        return schemas.CourseOut(
+            id=str(row["id"]),
+            code=row["code"],
+            owner_id=str(row["owner_id"]),
+        )
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise await errors.internal_error(exc)

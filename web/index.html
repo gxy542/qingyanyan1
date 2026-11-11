@@ -126,6 +126,21 @@
         <tbody id="allGradesBody"></tbody>
       </table>
     </div>
+
+    <!-- 添加课程：仅 employee / teacher 可见（学生视图不渲染此卡片） -->
+    <div class="card">
+      <h2>Добавить курс</h2>
+      <div id="courseMsg"></div>
+      <label>Код курса (например, CS-202)</label>
+      <input type="text" id="newCourseCode" placeholder="CS-202">
+      <button class="primary" onclick="createCourse()">Создать курс</button>
+
+      <h2 style="margin-top:20px">Список курсов</h2>
+      <table>
+        <thead><tr><th>Код</th><th>ID</th></tr></thead>
+        <tbody id="courseListBody"></tbody>
+      </table>
+    </div>
   </div>
 
 </div>
@@ -282,6 +297,8 @@ async function loadStaff() {
       </td>
     </tr>`;
   }
+  // 同时刷新课程列表
+  loadCourseList();
 }
 
 async function editGrade(id, currentVal, version) {
@@ -300,6 +317,30 @@ async function confirmGrade(id) {
     msg('staffMsg', 'Оценка подтверждена.', true);
     loadStaff();
   } catch (e) { msg('staffMsg', e.message); }
+}
+
+// ---------- 添加课程 ----------
+// 调用管理员新增课程接口；成功后清空输入并刷新课程列表
+async function createCourse() {
+  const code = document.getElementById('newCourseCode').value.trim();
+  if (!code) { msg('courseMsg', 'Введите код курса'); return; }
+  try {
+    await api('/admin/courses', { method: 'POST', body: JSON.stringify({ code }) });
+    msg('courseMsg', 'Курс создан.', true);
+    document.getElementById('newCourseCode').value = '';
+    loadCourseList();
+  } catch (e) { msg('courseMsg', e.message); }
+}
+
+// 拉取全部课程并渲染到表格
+async function loadCourseList() {
+  const courses = await api('/courses');
+  const tbody = document.getElementById('courseListBody');
+  tbody.innerHTML = '';
+  if (!courses.length) tbody.innerHTML = '<tr><td colspan="2">Пока нет курсов</td></tr>';
+  for (const c of courses) {
+    tbody.innerHTML += `<tr><td>${c.code}</td><td>${c.id.slice(0,8)}…</td></tr>`;
+  }
 }
 
 function enterApp() {

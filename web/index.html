@@ -88,6 +88,7 @@
       <input type="text" id="resetCode" placeholder="6-значный код">
       <label>Новый пароль (мин. 8 символов, заглавная + цифра)</label>
       <input type="password" id="resetNewPassword" placeholder="••••••••">
+      <div id="resetMsg"></div>
       <button class="primary" onclick="confirmReset()">Сменить пароль</button>
       <br>
       <a class="link" onclick="backToLogin()">Вернуться ко входу</a>
@@ -230,9 +231,9 @@ async function confirmReset() {
       code: document.getElementById('resetCode').value,
       new_password: document.getElementById('resetNewPassword').value,
     })});
-    msg('msg', 'Пароль изменён. Теперь войдите.', true);
+    msg('resetMsg', 'Пароль изменён. Теперь войдите.', true);
     backToLogin();
-  } catch (e) { msg('msg', e.message); }
+  } catch (e) { msg('resetMsg', e.message); }
 }
 
 function statusBadge(s) {

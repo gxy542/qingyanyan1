@@ -35,6 +35,7 @@
   .role-tag { background: rgba(255,255,255,.2); padding: 2px 8px; border-radius: 4px; font-size: 12px; }
   h2 { font-size: 16px; margin-bottom: 8px; color: #1f3a5f; }
   .hint { font-size: 12px; color: #6b7280; margin-top: 4px; }
+  .link { display: inline-block; margin-top: 14px; color: #1f3a5f; font-size: 13px; cursor: pointer; text-decoration: underline; }
 </style>
 </head>
 <body>
@@ -63,6 +64,8 @@
       <label>Пароль</label>
       <input type="password" id="loginPassword" placeholder="••••••••">
       <button class="primary" onclick="login()">Войти</button>
+      <br>
+      <a class="link" onclick="showReset()">Забыли пароль?</a>
     </div>
 
     <div id="paneRegister" style="display:none">
@@ -72,6 +75,22 @@
       <input type="password" id="regPassword" placeholder="••••••••">
       <div class="hint">Роль назначается сервером: новые пользователи — «студент».</div>
       <button class="primary" onclick="register()">Зарегистрироваться</button>
+    </div>
+
+    <!-- 找回密码：第一步取验证码，第二步用验证码设新密码 -->
+    <div id="paneReset" style="display:none">
+      <label>Email</label>
+      <input type="email" id="resetEmail" placeholder="student@test.edu">
+      <button class="primary" onclick="requestReset()">Получить код</button>
+      <div class="hint">Код приходит в локальный почтовый стаб: http://localhost:8025</div>
+
+      <label>Код из письма</label>
+      <input type="text" id="resetCode" placeholder="6-значный код">
+      <label>Новый пароль (мин. 8 символов, заглавная + цифра)</label>
+      <input type="password" id="resetNewPassword" placeholder="••••••••">
+      <button class="primary" onclick="confirmReset()">Сменить пароль</button>
+      <br>
+      <a class="link" onclick="backToLogin()">Вернуться ко входу</a>
     </div>
   </div>
 
@@ -175,6 +194,45 @@ function logout() {
   state = {};
   localStorage.clear();
   location.reload();
+}
+
+// ---------- 找回密码 ----------
+// 切到找回密码面板：隐藏登录/注册标签，显示重置表单
+function showReset() {
+  document.querySelector('.tabs').style.display = 'none';
+  document.getElementById('paneLogin').style.display = 'none';
+  document.getElementById('paneRegister').style.display = 'none';
+  document.getElementById('paneReset').style.display = '';
+}
+
+// 返回登录面板
+function backToLogin() {
+  document.querySelector('.tabs').style.display = '';
+  document.getElementById('paneReset').style.display = 'none';
+  showTab('login');
+}
+
+// 第一步：请求验证码（后端无论邮箱是否存在都返回同一提示，防枚举）
+async function requestReset() {
+  try {
+    await api('/auth/password-reset/request', { method: 'POST', body: JSON.stringify({
+      email: document.getElementById('resetEmail').value,
+    })});
+    msg('msg', 'Если email зарегистрирован, код отправлен. Проверьте Mailpit: http://localhost:8025', true);
+  } catch (e) { msg('msg', e.message); }
+}
+
+// 第二步：凭一次性验证码设置新密码；成功后清空该用户全部会话
+async function confirmReset() {
+  try {
+    await api('/auth/password-reset/confirm', { method: 'POST', body: JSON.stringify({
+      email: document.getElementById('resetEmail').value,
+      code: document.getElementById('resetCode').value,
+      new_password: document.getElementById('resetNewPassword').value,
+    })});
+    msg('msg', 'Пароль изменён. Теперь войдите.', true);
+    backToLogin();
+  } catch (e) { msg('msg', e.message); }
 }
 
 function statusBadge(s) {

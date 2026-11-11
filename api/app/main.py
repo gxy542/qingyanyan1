@@ -11,7 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from . import config, db, redis_client, seed
-from .routers import admin, auth, courses, grades, retake
+from .routers import admin, auth, courses, grades, overview, retake
 
 logging.basicConfig(level=logging.INFO)
 
@@ -61,6 +61,7 @@ app.include_router(grades.router)
 app.include_router(retake.router)
 app.include_router(courses.router)
 app.include_router(admin.router)
+app.include_router(overview.router)
 
 # 前端静态页面（web/index.html）。容器内挂载在 /app/web。
 # 放在最后挂载：/api/v1/... 路由优先命中，其余路径回落到静态页。

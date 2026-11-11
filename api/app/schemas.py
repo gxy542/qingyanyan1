@@ -127,6 +127,28 @@ class CourseCreateRequest(BaseModel):
     code: str = Field(min_length=2, max_length=32)
 
 
+# --------------------------- 成绩册总览（联表展示） ---------------------------
+
+class GradebookRowOut(BaseModel):
+    """员工/教师成绩册网格的一行：学生邮箱 + 课程代码 + 成绩。
+    由 grades JOIN enrollments JOIN users JOIN courses 联表得到。"""
+    grade_id: str
+    student_email: str
+    course_code: str
+    value: float | None
+    status: str
+    version: int
+
+
+class MyGradeRowOut(BaseModel):
+    """学生自己的成绩行：带课程代码（不再显示内部 enrollment_id）。"""
+    grade_id: str
+    course_code: str
+    value: float | None
+    status: str
+    version: int
+
+
 class AdminConfirmRequest(BaseModel):
     """管理员确认成绩（O-05）。action 由客户端声明（approve/reject），
     但只有 employee 角色能调用；谁操作由服务器审计。"""
